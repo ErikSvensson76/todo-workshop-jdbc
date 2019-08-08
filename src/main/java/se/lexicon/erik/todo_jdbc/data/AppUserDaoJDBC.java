@@ -6,15 +6,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import se.lexicon.erik.todo_jdbc.model.AppUser;
 
 public class AppUserDaoJDBC {
 	
+	/*
+	 * 	INSERT INTO table_name (column1, column2, column3, ...)
+	   	VALUES (value1, value2, value3, ...);
+	 */
 	public static final String INSERT = "INSERT INTO appuser (FIRST_NAME,LAST_NAME,BIRTH_DATE,ACTIVE,EMAIL)"
 			+ "VALUES(?,?,?,?,?)";
 	public static final String FIND_BY_ID = "SELECT * FROM appuser WHERE ID = ?";
+	public static final String FIND_BY_ACTIVE = "SELECT * FROM appuser WHERE ACTIVE = ?";
 	
 	/*
 	 * 	UPDATE table_name
@@ -23,6 +30,10 @@ public class AppUserDaoJDBC {
 	 */
 	public static final String UPDATE = "UPDATE appuser SET FIRST_NAME = ?, LAST_NAME = ?, BIRTH_DATE = ?, ACTIVE = ?, EMAIL = ? WHERE ID = ?";
 	
+	/*
+	 * 	DELETE FROM table_name WHERE condition;
+	 */
+	public static final String DELETE = "DELETE FROM appuser WHERE ID = ?";	
 	
 	public AppUser persist(AppUser user) {
 		
@@ -89,6 +100,28 @@ public class AppUserDaoJDBC {
 		
 		return user == null ? Optional.empty() : Optional.of(user);
 	}
+	
+	public List<AppUser> findByActiveStatus(boolean active){
+		List<AppUser> result = new ArrayList<>();
+		try(Connection connection = Database.getConnection();
+			PreparedStatement statement = createFindByActiveStatement(connection, active);
+			ResultSet resultSet = statement.executeQuery()){
+			
+			while(resultSet.next()) {
+				result.add(resultSetToAppUser(resultSet));
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
+
+	private PreparedStatement createFindByActiveStatement(Connection connection, boolean active) throws SQLException {
+		PreparedStatement statement = connection.prepareStatement(FIND_BY_ACTIVE);
+		statement.setBoolean(1, active);
+		return statement;
+	}
 
 	private PreparedStatement createFindByIdStatement(Connection connection, int id) throws SQLException {
 		PreparedStatement statement = connection.prepareStatement(FIND_BY_ID);
@@ -118,6 +151,21 @@ public class AppUserDaoJDBC {
 		return appUser;
 		
 	}
+	
+	public void delete(int appUserId) {
+		try(Connection connection = Database.getConnection();
+			PreparedStatement deleteStatement = connection.prepareStatement(DELETE)){
+			
+			deleteStatement.setInt(1, appUserId);
+			deleteStatement.execute();
+			
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+	}
+	
+	 
 
 	private PreparedStatement createUpdateStatement(Connection connection, AppUser appUser) throws SQLException {
 		PreparedStatement statement = connection.prepareStatement(UPDATE);
